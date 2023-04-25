@@ -1,0 +1,364 @@
+// HW3 by Taylor Robey
+// SU Net ID: tdrobey SUID: 9526286843
+
+#include <iostream>
+#include <list>
+#include <map>
+#include <string>
+#include <tuple>
+#include <iomanip>
+using namespace std;
+
+class course {
+public:
+	string name;
+	int section;
+	int credits;
+	string grade;
+	course() {}
+	course(string n, int s, int c, string g) { name = n; section = s; credits = c; grade = g; }
+
+	bool operator==(const course& c) const { return name == c.name; }
+	bool operator<(const course& c) const { return name < c.name; }
+};
+
+void add_student(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int id);
+void remove_student(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int id);
+void add_course(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int semester, int id, course c);
+void drop_course(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int semester, int id, course c);
+void print_student_semester_courses(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int semester, int id);
+void print_student_all_courses(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int id);
+
+template <typename T>
+ostream& operator << (ostream& output, const list<T>& MyList) {
+	output << "DB:" << endl;
+	//for each student
+	for (auto const& i : MyList) {
+		//print out student id
+		output << "ID: " << get<0>(i) << endl;
+		output << "Overall GPA: " << fixed << setprecision(2) << get<2>(i) << endl;
+		output << "Overall Credits: " << get<1>(i) << endl;
+		//if there are any semesters for this student, display them
+		if (get<3>(i) != nullptr) {
+			auto& Sem = get<3>(i);
+			for (auto mapIt = (*Sem).begin(); mapIt != (*Sem).end(); mapIt++) {
+				output << "Semester: " << mapIt->first << endl;
+				output << "GPA: " << fixed << setprecision(2) << mapIt->second->first->second << endl;
+				output << "Credits: " << mapIt->second->first->first << endl;
+				//find student based on id
+				list<course*>* crsList = mapIt->second->second;
+				list<course> newList;
+				for (auto const& k : *crsList) {
+					newList.push_back(*k);
+				}
+				newList.sort();
+				for (auto listIt = newList.begin(); listIt != newList.end(); listIt++) {
+					auto& currCrs = *listIt;
+					output << "(" << currCrs.name << " " << currCrs.section << " "
+						<< currCrs.credits << " " << currCrs.grade << ") ";
+				}
+				}
+			}
+		output << endl;
+	}
+	return output;
+}
+
+
+int main() {
+
+	list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> > DB;
+
+
+
+	add_student(DB, 11111);
+	course C1("CIS554", 1, 3, "A-"), C2("CSE674", 1, 3, "B+"), C3("MAT296", 8, 4, "A"), C4("WRT205", 5, 3, "A");
+
+	add_course(DB, 20171, 11111, C1);
+	add_course(DB, 20171, 11111, C4);
+	add_course(DB, 20171, 11111, C3);
+	add_course(DB, 20171, 11111, C2);
+	print_student_semester_courses(DB, 20171, 11111);
+
+	drop_course(DB, 20171, 11111, C1);
+	print_student_semester_courses(DB, 20171, 11111); //sorted according to course name
+
+	course C5("CIS351", 2, 3, "A-"), C6("PSY205", 5, 3, "B+"), C7("MAT331", 2, 3, "A"), C8("ECN203", 4, 3, "A");
+	add_course(DB, 20172, 11111, C5);
+	add_course(DB, 20172, 11111, C6);
+	add_course(DB, 20172, 11111, C7);
+	add_course(DB, 20172, 11111, C8);
+	add_course(DB, 20172, 11111, C3);
+	print_student_all_courses(DB, 11111);//ID GPA
+
+	add_student(DB, 11112);
+	add_course(DB, 20171, 11112, C2);
+	add_course(DB, 20171, 11112, C5);
+	add_course(DB, 20171, 11112, C7);
+	add_course(DB, 20171, 11112, C4);
+	print_student_semester_courses(DB, 20171, 11112);
+
+	add_course(DB, 20172, 11112, C8);
+	add_course(DB, 20172, 11112, C3);
+	add_course(DB, 20172, 11112, C5);
+	add_course(DB, 20172, 11112, C1);
+	print_student_semester_courses(DB, 20172, 11112);
+
+	print_student_all_courses(DB, 11112);
+
+	cout << DB << endl;
+	remove_student(DB, 11112);
+	cout << DB << endl;
+	getchar();
+	getchar();
+	return 0;
+}
+
+void add_student(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int id) {
+	//if student is in list, do not add
+	for (auto const& i : DB) {
+		if (get<0>(i) == id) {
+			return;
+		}
+	}
+	//add student to list
+	tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> 
+		stud{ id,0,0.00, new map<int, pair<pair<int, float>*, list<course*>*>*> };
+	DB.push_back(stud);
+}
+
+void remove_student(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int id) {
+	//if student is not in list, do not remove
+	for (auto DBit = DB.begin(); DBit != DB.end(); ) {
+		//delete student if in list
+		if (get<0>(*DBit) == id) {
+			//cleanup before deleting
+			//if any semesters exist, delete all their components
+			if (get<3>(*DBit) != nullptr) {
+				for (auto remIt = (*get<3>(*DBit)).begin(); remIt != (*get<3>(*DBit)).end(); remIt++) {
+					//if course list exists, delete each course then clear course list
+					if (remIt->second->second != nullptr) {
+						auto& remList = *remIt->second->second;
+						for (auto const& k: remList) {
+							delete k;
+						}
+						remList.clear();
+						delete remIt->second->second;
+					}
+					//if there is a pair for gpa/credits, delete it
+					if (remIt->second->first != nullptr) {
+						delete remIt->second->first;
+					}
+					//delete the pair that is now empty
+					delete remIt->second;
+				}
+			}
+			//delete the map of semesters
+			delete get<3>(*DBit);
+			//delete the student
+			DBit = DB.erase(DBit);
+		}
+		else {
+			DBit++;
+		}
+	}
+}
+
+
+void add_course(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int semester, int id, course c) {
+	//When adding a course, if the course is already in DB (in any semester), then ignore the operation.
+	//When dropping or adding a course, overall GPA, semester GPA, overall credits and semester credits all need to be updated.
+	
+	//find student based on id
+	for (auto DBit = DB.begin(); DBit != DB.end(); DBit++) {
+		if (get<0>(*DBit) == id) {
+			//check that course does not exist
+			//check each semester
+			bool exists = false;
+			//if no semesters exist for this student, initialize the semester field
+			if (get<3>(*DBit) == nullptr) {
+				get<3>(*DBit) = new map<int, pair<pair<int, float>*, list<course*>*>*>;
+			}
+			auto& Sem = get<3>(*DBit);
+			//check each semester to find course if it exists
+			for (auto j = (*Sem).begin(); j != (*Sem).end(); j++) {
+				//check within semester
+				auto& crsLst = j->second->second;
+				for (auto const& k : *crsLst) {
+					//check to see if matching course to be added
+					if (*k == c) {
+						exists = true;
+					}
+				}	
+			}
+			//if course does not exist, add it
+			if (!exists) {
+				//create semeester if it doeas not already exist
+				if (Sem->find(semester) == Sem->end()) {
+					Sem->insert({ semester,  new pair<pair<int, float>*, list<course*>*> });
+					auto& currSem = *Sem->find(semester);
+					currSem.second->first = new pair<int, float>;
+					currSem.second->first->first = 0;
+					currSem.second->first->second = 0.0;
+					currSem.second->second = new list<course*>;
+				}
+				
+				auto& addSem = *Sem->find(semester);
+				//add course to semester
+				auto& crsLst = *addSem.second->second;
+				course *newCrs = new course(c.name, c.section, c.credits, c.grade);
+				crsLst.push_back(newCrs);
+
+				//references
+				auto& semGpa = addSem.second->first->second;
+				auto& semCred = addSem.second->first->first;
+				auto& totGpa = get<2>(*DBit);
+				auto& totCred = get<1>(*DBit);
+
+				float numGrade = 0.0;
+				string g = newCrs->grade;
+				if (g == "A") { numGrade = 4.0; }
+				if (g == "A-") { numGrade = 3.667; }
+				if (g == "B+") { numGrade = 3.333; }
+				if (g == "B") { numGrade = 3.0; }
+				if (g == "B-") { numGrade = 2.667; }
+				if (g == "C+") { numGrade = 2.333; }
+				if (g == "C") { numGrade = 2.0; }
+				if (g == "C-") { numGrade = 1.667; }
+				if (g == "D") { numGrade = 1.0; }
+				if (g == "D-") { numGrade = 0.667; }
+				semGpa *= semCred;
+				totGpa *= totCred;
+				semGpa += (newCrs->credits * numGrade);
+				totGpa += (newCrs->credits * numGrade);
+				semCred += newCrs->credits;
+				totCred += newCrs->credits;
+				semGpa /= semCred;
+				totGpa /= totCred;
+			}
+		}
+	}
+}
+
+void drop_course(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int semester, int id, course c) {
+	//When dropping a course, if the course does not exist, then ignore the operation.
+	//When dropping or adding a course, overall GPA, semester GPA, overall credits and semester credits all need to be updated.
+	
+	for (auto DBit = DB.begin(); DBit != DB.end(); DBit++) {
+		//find student
+		if (get<0>(*DBit) == id) {
+			//find semester
+			if (get<3>(*DBit)->find(semester) != get<3>(*DBit)->end()) {
+				//find course
+				auto& crsList = *get<3>(*DBit)->find(semester)->second->second;
+				for (auto i = crsList.begin(); i != crsList.end();i++) {
+					//if course exists, then delete
+					if (**i == c) {
+						//update GPA and creds first
+						auto& dropSem = *get<3>(*DBit)->find(semester);
+						auto& semGpa = dropSem.second->first->second;
+						auto& semCred = dropSem.second->first->first;
+						auto& totGpa = get<2>(*DBit);
+						auto& totCred = get<1>(*DBit);
+
+						float numGrade = 0.0;
+						string g = c.grade;
+						if (g == "A") { numGrade = 4.0; }
+						if (g == "A-") { numGrade = 3.667; }
+						if (g == "B+") { numGrade = 3.333; }
+						if (g == "B") { numGrade = 3.0; }
+						if (g == "B-") { numGrade = 2.667; }
+						if (g == "C+") { numGrade = 2.333; }
+						if (g == "C") { numGrade = 2.0; }
+						if (g == "C-") { numGrade = 1.667; }
+						if (g == "D") { numGrade = 1.0; }
+						if (g == "D-") { numGrade = 0.667; }
+
+						semGpa *= semCred;
+						totGpa *= totCred;
+						semGpa -= (c.credits * numGrade);
+						totGpa -= (c.credits * numGrade);
+						semCred -= c.credits;
+						totCred -= c.credits;
+						semGpa /= semCred;
+						totGpa /= totCred;
+						//delete course
+						delete *i;
+						crsList.remove(*i);
+
+						return;
+					}
+				}
+			}
+		}
+	}
+}
+
+void print_student_semester_courses(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int semester, int id) {
+	//All courses in a semester need to be sorted.
+	//find student based on id
+	list<course*>* crsList = nullptr;
+	for (auto DBit = DB.begin(); DBit != DB.end(); DBit++) {
+		if (get<0>(*DBit) == id) {
+			//print output
+			cout << "ID: " << id << endl;
+			cout << "Semester: " << semester << endl;
+			cout << "GPA: " << fixed << setprecision(2) << get<2>(*DBit) << endl;
+			cout << "Credits " << get<1>(*DBit)<< endl;
+			
+			//pass back current course list to use for other part of output
+			auto& currMap = get<3>(*DBit);
+			auto currSem = currMap->find(semester);
+			crsList = currSem->second->second;
+		}
+	}
+	//sort and print courses
+	if (crsList != nullptr) {
+		list<course> newList;
+		for (auto const& k : *crsList) {
+			auto testi = k;
+			newList.push_back(*k);
+		}
+		newList.sort();
+		for (auto listIt = newList.begin(); listIt != newList.end(); listIt++) {
+			auto& currCrs = *listIt;
+			cout << "(" << currCrs.name << " " << currCrs.section << " "
+				<< currCrs.credits << " " << currCrs.grade << ") ";
+		}
+	}
+	cout << endl << endl;
+}
+
+void print_student_all_courses(list<tuple<int, int, float, map<int, pair<pair<int, float>*, list<course*>*>*>*> >& DB, int id) {
+	for (auto DBit = DB.begin(); DBit != DB.end(); DBit++) {
+		if (get<0>(*DBit) == id) {
+			//print output
+			cout << "ID: " << id << endl;
+			cout << "Overall GPA: " << fixed << setprecision(2) << get<2>(*DBit) << endl;
+			cout << "Overall Credits " << get<1>(*DBit) << endl;
+			auto& currMap = get<3>(*DBit);
+			for (auto semIt = (*currMap).begin(); semIt != (*currMap).end(); semIt++) {
+				cout << "Semester: " << semIt->first << endl;
+				cout << "GPA: " << fixed << setprecision(2) << semIt->second->first->second << endl;
+				cout << "Credits: " << semIt->second->first->first;
+				cout << endl;
+				//sort and print courses
+				if (semIt->second->second != nullptr) {
+					list<course> newList;
+					for (auto const& k : *semIt->second->second) {
+						auto testi = k;
+						newList.push_back(*k);
+					}
+					newList.sort();
+					for (auto listIt = newList.begin(); listIt != newList.end(); listIt++) {
+						auto& currCrs = *listIt;
+						cout << "(" << currCrs.name << " " << currCrs.section << " "
+							<< currCrs.credits << " " << currCrs.grade << ") ";
+					}
+				}
+				cout << endl;
+			}	
+		}
+	}
+	cout << endl << endl;;
+}
